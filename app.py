@@ -85,9 +85,9 @@ with st.sidebar:
     build_bank_btn = st.button("🚀 Question Bank mein Sawal Jodein")
 
 
-# Function with auto-retry for 503 errors
+# Function with auto-retry for 503 and 429 (Rate Limit) errors
 def call_gemini_with_retry(client, model, contents, config, max_retries=3):
-    delay = 3
+    delay = 5
     for attempt in range(max_retries):
         try:
             return client.models.generate_content(
@@ -99,6 +99,8 @@ def call_gemini_with_retry(client, model, contents, config, max_retries=3):
                 "503" in error_str
                 or "UNAVAILABLE" in error_str
                 or "high demand" in error_str
+                or "429" in error_str
+                or "RESOURCE_EXHAUSTED" in error_str
             ):
                 if attempt < max_retries - 1:
                     time.sleep(delay)
@@ -162,11 +164,12 @@ if build_bank_btn:
                         types.Part.from_bytes(data=cam_bytes, mime_type="image/jpeg")
                     )
 
+                # Using Gemini 2.0 Flash model here
                 if contents_list:
                     contents_list.append(prompt)
                     response = call_gemini_with_retry(
                         client,
-                        "gemini-3.8-flash",
+                        "gemini-2.0-flash",
                         contents_list,
                         config=generation_config,
                     )
@@ -174,7 +177,7 @@ if build_bank_btn:
                     full_prompt = f"{prompt}\n\nNotes:\n{notes_text[:100000]}"
                     response = call_gemini_with_retry(
                         client,
-                        "gemini-3.8-flash",
+                        "gemini-2.0-flash",
                         full_prompt,
                         config=generation_config,
                     )
